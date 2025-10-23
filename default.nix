@@ -32,6 +32,16 @@ let
     config = { };
   };
 
+  pkgsStatic = import nixpkgs {
+    inherit system;
+    overlays = [ overlay ];
+    config = { };
+    crossSystem = {
+      config = "${system}-musl";
+      isStatic = true;
+    };
+  };
+
   inherit (pkgs) haskell lib;
   fs = lib.fileset;
 
@@ -60,6 +70,13 @@ let
     haskell.lib.justStaticExecutables
     haskell.lib.dontHaddock
     (drv: lib.lazyDerivation { derivation = drv; })
+  ];
+
+  buildStatic = lib.pipe pkgsStatic.haskellPackages.nixfmt [
+    haskell.lib.justStaticExecutables
+    haskell.lib.dontHaddock
+    haskell.lib.disableLibraryProfiling
+    haskell.lib.disableExecutableProfiling
   ];
 
   treefmtEval = (import sources.treefmt-nix).evalModule pkgs {
@@ -114,7 +131,10 @@ let
 in
 build
 // {
-  packages.nixfmt = build;
+  packages = {
+    nixfmt = build;
+    nixfmt-static = buildStatic;
+  };
 
   inherit pkgs;
 
