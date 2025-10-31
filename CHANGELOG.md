@@ -1,5 +1,8 @@
 # Revision history for nixfmt
 
+## 1.1.2 -- 2025-10-08
+test
+
 ## 1.1.1 -- test
 test
 
