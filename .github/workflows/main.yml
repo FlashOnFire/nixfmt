@@ -8,6 +8,9 @@ on:
   push:
     branches:
       - master
+    paths:
+      - 'nixfmt.cabal'
+      - 'CHANGELOG.md'
 
 permissions:
   pull-requests: write
@@ -96,3 +99,57 @@ jobs:
           edit-mode: replace
           body: |
             [Nixpkgs diff](https://github.com/${{ vars.MACHINE_USER }}/nixpkgs/commits/nixfmt-${{ github.event.pull_request.number }})
+
+  check-version-and-changelog:
+      runs-on: ubuntu-latest
+      if: github.event_name == 'pull_request_target'
+
+      steps:
+        - uses: actions/checkout@v4
+          with:
+            fetch-depth: 0
+            ref: ${{ github.event.pull_request.head.ref }}
+
+        - name: Compare nixfmt.cabal version with base branch
+          id: compare
+          run: |
+            git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+            git show origin/${{ github.event.pull_request.base.ref }}:nixfmt.cabal > base.cabal
+
+            BASE_VERSION=$(grep -m1 "^version:" base.cabal | awk '{print $2}')
+            CURR_VERSION=$(grep -m1 "^version:" nixfmt.cabal | awk '{print $2}')
+
+            echo "Base version: $BASE_VERSION"
+            echo "PR version:   $CURR_VERSION"
+
+            if [ "$BASE_VERSION" != "$CURR_VERSION" ]; then
+              echo "version_changed=true" >> $GITHUB_ENV
+              echo "new_version=$CURR_VERSION" >> $GITHUB_ENV
+              echo "Version change detected: $BASE_VERSION → $CURR_VERSION"
+            else
+              echo "version_changed=false" >> $GITHUB_ENV
+              echo "No version change detected"
+            fi
+
+        - name: Check if CHANGELOG.md was modified
+          id: changelog
+          if: env.version_changed == 'true'
+          run: |
+            if git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD | grep -q '^CHANGELOG\.md$'; then
+              echo "changelog_changed=true" >> $GITHUB_ENV
+              echo "CHANGELOG.md modified in this PR"
+            else
+              echo "changelog_changed=false" >> $GITHUB_ENV
+              echo "CHANGELOG.md not modified"
+            fi
+
+        - name: Fail if version bumped but changelog not updated
+          if: env.version_changed == 'true' && env.changelog_changed == 'false'
+          run: |
+            echo "❌ Version bump detected ($new_version), but CHANGELOG.md was not updated."
+            echo "Please update CHANGELOG.md to document this release."
+            exit 1
+
+        - name: Pass if everything is fine
+          if: env.version_changed == 'false' || env.changelog_changed == 'true'
+          run: echo "✅ Checks passed!"
