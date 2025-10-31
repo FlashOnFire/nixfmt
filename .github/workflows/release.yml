@@ -1,0 +1,43 @@
+name: Release on Version Change
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'nixfmt.cabal'
+
+jobs:
+  release-if-version-changed:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2  # need previous commit for comparison
+
+      - name: Compare nixfmt.cabal version with previous commit
+        id: compare
+        run: |
+          CABAL_FILE=nixfmt.cabal
+          CURR_VERSION=$(grep -m1 "^version:" "$CABAL_FILE" | awk '{print $2}')
+          PREV_VERSION=$(git show HEAD~1:"$CABAL_FILE" | grep -m1 "^version:" | awk '{print $2}' || echo "none")
+
+          echo "Current version: $CURR_VERSION"
+          echo "Previous version: $PREV_VERSION"
+
+          if [ "$CURR_VERSION" != "$PREV_VERSION" ]; then
+            echo "version_changed=true" >> $GITHUB_ENV
+            echo "new_version=$CURR_VERSION" >> $GITHUB_ENV
+          else
+            echo "version_changed=false" >> $GITHUB_ENV
+          fi
+
+      - name: Create Git tag and GitHub Release
+        if: env.version_changed == 'true'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "v${{ env.new_version }}"
+          name: "Release v${{ env.new_version }}"
+          generate_release_notes: true
