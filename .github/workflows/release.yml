@@ -34,10 +34,31 @@ jobs:
             echo "version_changed=false" >> $GITHUB_ENV
           fi
 
+      - name: Extract release notes from CHANGELOG.md
+        if: env.version_changed == 'true'
+        id: changelog
+        run: |
+          VERSION=${{ steps.versions.outputs.curr_version }}
+
+          # Extract the section for this version
+          awk -v ver="## $VERSION" '
+            $0 == ver {found=1; next}
+            /^## / && found {exit}
+            found
+          ' CHANGELOG.md > RELEASE_NOTES.md
+
+          echo "---- Extracted release notes ----"
+          cat RELEASE_NOTES.md
+          echo "---------------------------------"
+
+          # Save to output for GitHub release
+          NOTES=$(cat RELEASE_NOTES.md | awk '{printf "%s\\n", $0}')
+          echo "notes=$NOTES" >> $GITHUB_OUTPUT
+
       - name: Create Git tag and GitHub Release
         if: env.version_changed == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: "v${{ env.new_version }}"
-          name: "Release v${{ env.new_version }}"
-          generate_release_notes: true
+          tag_name: "v${{ steps.versions.outputs.curr_version }}"
+          name: "Release v${{ steps.versions.outputs.curr_version }}"
+          body_path: RELEASE_NOTES.md
