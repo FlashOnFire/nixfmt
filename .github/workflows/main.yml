@@ -96,3 +96,29 @@ jobs:
           edit-mode: replace
           body: |
             [Nixpkgs diff](https://github.com/${{ vars.MACHINE_USER }}/nixpkgs/commits/nixfmt-${{ github.event.pull_request.number }})
+  build-static:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v26
+      - uses: cachix/cachix-action@v14
+        with:
+          name: nixos-nixfmt
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+      - name: Build normal binary
+        run: nix build -L .#nixfmt
+      
+      - name: Build static binary
+        run: nix build -L .#nixfmt-static
+      
+      - name: Verify static linking
+        run: |
+          ldd ./result/bin/nixfmt && exit 1 || echo "✓ Static binary confirmed"
+          ./result/bin/nixfmt --version
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nixfmt-static-x86_64-linux
+          path: result/bin/nixfmt
