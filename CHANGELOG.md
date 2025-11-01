@@ -1,5 +1,10 @@
 # Revision history for nixfmt
 
+## 2.1.0 -- 2025-10-08
+
+- Added support for "language annotation" comments (e.g. `/* lang */ ""`), used by things like tree-sitter grammars: <https://github.com/NixOS/nixfmt/pull/343>
+- Fixed a regression causing incorrect path value indentation: <https://github.com/NixOS/nixfmt/pull/342>
+
 ## 1.1.0 -- 2025-10-07
 
 - Added support for "language annotation" comments (e.g. `/* lang */ ""`), used by things like tree-sitter grammars: <https://github.com/NixOS/nixfmt/pull/343>
