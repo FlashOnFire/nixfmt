@@ -1,5 +1,10 @@
 # Revision history for nixfmt
 
+## 7.1.0 -- 2028-10-07
+
+- test
+- test2
+
 ## 1.1.0 -- 2025-10-07
 
 - Added support for "language annotation" comments (e.g. `/* lang */ ""`), used by things like tree-sitter grammars: <https://github.com/NixOS/nixfmt/pull/343>
